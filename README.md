@@ -71,7 +71,15 @@ You can also get the access token from http response JSON body.
 
 If you want to get all the cards that you bought or you sold, you can use the `list-traded-cards` command.
 
+You can choose the type of reports you want.
+
 ```bash
-npx . list-traded-cards -r html
-npx . list-traded-cards -r jsonl
+npx . list-traded-cards --report-type html # by default
+npx . list-traded-cards --report-type jsonl
+```
+
+You can also choose the oldest date of the transactions you want in order to reduce the report size.
+
+```bash
+npx . list-traded-cards --oldest-date 2026-02-01
 ```
