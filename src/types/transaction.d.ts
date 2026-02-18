@@ -4,10 +4,10 @@ import { Card, CardOffer } from "./card";
 export type Transaction = {
   id: string;
   date: Date;
-  status: TransactionStatuses;
+  status: `${TransactionStatuses}`;
   amount: number;
   currency: string;
-  type: TransactionTypes;
+  type: `${TransactionTypes}`;
 };
 export type TransactionDetailCard = Pick<Card, "imageURL" | "name"> &
   Pick<CardOffer, "price" | "quantity">;

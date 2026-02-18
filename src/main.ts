@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { Command, Option } from "commander";
+import { Command, InvalidArgumentError, Option } from "commander";
 import logger from "./logger";
 import { ReportType } from "./contants/reporting";
 import CardTradeService from "./services/CardTradeService";
 import App from "./App";
+import { isValid } from "date-fns";
 
 const program = new Command();
 
@@ -38,17 +39,37 @@ The access-token, it will expires after around 1 hour.
 
 program
   .command("list-traded-cards")
-  .description("List all bought and sold cards.")
+  .description("List all bought and sold cards from newest to oldest.")
   .addOption(
     new Option("-r, --report-type <string>", "The report type to generate.")
       .default(ReportType.HTML)
       .choices(Object.values(ReportType))
   )
-  .action(async (commandAndOptions: { reportType: `${ReportType}` }) => {
-    await CardTradeService.buildCardTradeReport({
-      reportType: commandAndOptions.reportType,
-    });
-  });
+  .addOption(
+    new Option(
+      "-o, --oldest-date <Date>",
+      "The oldest date to consider for transactions."
+    )
+      .default(null)
+      .argParser((value) => {
+        const date = new Date(value);
+        if (!isValid(date)) {
+          throw new InvalidArgumentError("Not a valid date.");
+        }
+        return date;
+      })
+  )
+  .action(
+    async (commandAndOptions: {
+      reportType: `${ReportType}`;
+      oldestDate: Date | null;
+    }) => {
+      await CardTradeService.buildCardTradeReport({
+        reportType: commandAndOptions.reportType,
+        oldestDate: commandAndOptions.oldestDate,
+      });
+    }
+  );
 
 async function main() {
   await program.parseAsync(process.argv);

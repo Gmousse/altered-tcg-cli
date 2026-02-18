@@ -3,8 +3,7 @@ import logger from "@/logger";
 import { Transaction, TransactionDetailCard } from "@/types/transaction";
 import { TransactionTypes, TransactionStatuses } from "@/contants/transaction";
 
-type RawTransaction = Transaction & {
-  type: TransactionTypes.SELL | string;
+type RawTransaction = Omit<Transaction, "date"> & {
   date: string;
 };
 
@@ -24,10 +23,7 @@ function formatTransaction(rawTransaction: RawTransaction): Transaction {
     status: rawTransaction.status,
     amount: rawTransaction.amount,
     currency: rawTransaction.currency,
-    type:
-      rawTransaction.type === TransactionTypes.SELL
-        ? TransactionTypes.SELL
-        : TransactionTypes.BUY,
+    type: rawTransaction.type,
   };
 }
 
@@ -42,8 +38,16 @@ function formatTransactionDetailCard(
   };
 }
 
+type TransactionOptions = {
+  transactionTypes?: `${TransactionTypes}`[];
+  oldestDate?: Date | null;
+};
+
 export default class TransactionRepository {
-  static async *getSucceededTransactions() {
+  static async *getSucceededTransactions(options: TransactionOptions) {
+    const transactionTypes =
+      options.transactionTypes ?? Object.values(TransactionTypes);
+    const oldestDate = options.oldestDate ?? new Date(86400000);
     const transactions =
       await AlteredConnector.getInstance().getItemsByPage<RawTransaction>(
         `payments/wallets/transactions`,
@@ -51,18 +55,23 @@ export default class TransactionRepository {
           searchParams: {
             "order[date]": "desc",
           },
-        }
+        },
+        100
       );
 
     for await (const transaction of transactions) {
       if (transaction.status !== TransactionStatuses.SUCCEEDED) {
         continue;
       }
-      if (transaction.type === TransactionTypes.EQUINOX_FEES) {
+      if (!transactionTypes.includes(transaction.type)) {
         continue;
       }
 
-      yield formatTransaction(transaction);
+      const formattedTransaction = formatTransaction(transaction);
+      if (formattedTransaction.date < oldestDate) {
+        return;
+      }
+      yield formattedTransaction;
     }
   }
 

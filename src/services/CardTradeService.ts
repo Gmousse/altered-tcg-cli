@@ -5,32 +5,22 @@ import { TransactionTypes } from "@/contants/transaction";
 import { getReport } from "@/utils/reporting";
 import open from "open";
 
+type CardTradeReportOptions = {
+  reportType: `${ReportType}`;
+  oldestDate?: Date | null;
+  transactionTypes?: (`${TransactionTypes.BUY}` | `${TransactionTypes.SELL}`)[];
+};
+
 export default class CardTradeService {
-  static async *getBoughtCard() {
-    const transactions = await TransactionRepository.getSucceededTransactions();
+  static async *getTradedCards({
+    oldestDate,
+    transactionTypes,
+  }: Omit<CardTradeReportOptions, "reportType">) {
+    const transactions = await TransactionRepository.getSucceededTransactions({
+      transactionTypes,
+      oldestDate,
+    });
     for await (const transaction of transactions) {
-      if (transaction.type !== TransactionTypes.BUY) {
-        continue;
-      }
-
-      const transactionDetailCard =
-        await TransactionRepository.getTransactionCard(transaction.id);
-
-      if (transactionDetailCard === null) {
-        continue;
-      }
-
-      yield transactionDetailCard;
-    }
-  }
-
-  static async *getSoldCard() {
-    const transactions = await TransactionRepository.getSucceededTransactions();
-    for await (const transaction of transactions) {
-      if (transaction.type !== TransactionTypes.SELL) {
-        continue;
-      }
-
       const transactionDetailCard =
         await TransactionRepository.getTransactionCard(transaction.id);
 
@@ -44,12 +34,16 @@ export default class CardTradeService {
 
   static async buildCardTradeReport({
     reportType,
-  }: {
-    reportType: `${ReportType}`;
-  }) {
+    oldestDate,
+  }: CardTradeReportOptions) {
     logger.info("Building bought cards report...");
     const buyReport = getReport(reportType, "bought-cards");
-    await buyReport.writeReport(await this.getBoughtCard());
+    await buyReport.writeReport(
+      await this.getTradedCards({
+        oldestDate,
+        transactionTypes: [TransactionTypes.BUY],
+      })
+    );
     logger.info(
       `Bought cards report is available at ${buyReport.reportPath}. Opening it in your browser...`
     );
@@ -57,7 +51,12 @@ export default class CardTradeService {
 
     logger.info("Building sold cards report...");
     const sellReport = getReport(reportType, "sold-cards");
-    await sellReport.writeReport(await this.getSoldCard());
+    await sellReport.writeReport(
+      await this.getTradedCards({
+        oldestDate,
+        transactionTypes: [TransactionTypes.SELL],
+      })
+    );
     logger.info(
       `Sold cards report is available at ${sellReport.reportPath}. Opening it in your browser...`
     );

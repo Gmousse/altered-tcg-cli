@@ -22,6 +22,7 @@
     "open": "~10.1.1",
     "pino": "~8.17.2",
     "ky": "^1.8.1",
+    "date-fns": "~4.1.0",
     "pino-pretty": "~10.3.0"
   },
   "devDependencies": {
